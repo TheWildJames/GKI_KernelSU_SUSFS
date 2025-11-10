@@ -1,0 +1,91 @@
+--- a/fs/proc/task_mmu.c
++++ b/fs/proc/task_mmu.c
+@@ -295,6 +295,25 @@
+ 	if (file) {
+ 		struct inode *inode = file_inode(vma->vm_file);
+ #ifdef CONFIG_KSU_SUSFS_SUS_MAP
++		/* Name-based masking: mask by base filename (e.g., memfd:NAME) */
++		if (likely(susfs_is_current_proc_umounted()) &&
++		    susmaps_should_mask_file_by_basename(file)) {
++			seq_setwidth(m, 25 + sizeof(void *) * 6 - 1);
++			seq_put_hex_ll(m, NULL, vma->vm_start, 8);
++			seq_put_hex_ll(m, "-", vma->vm_end, 8);
++			seq_putc(m, ' ');
++			seq_putc(m, '-');
++			seq_putc(m, '-');
++			seq_putc(m, '-');
++			seq_putc(m, 'p');
++			seq_put_hex_ll(m, " ", pgoff, 8);
++			seq_put_hex_ll(m, " ", MAJOR(dev), 2);
++			seq_put_hex_ll(m, ":", MINOR(dev), 2);
++			seq_put_decimal_ull(m, " ", ino);
++			seq_putc(m, ' ');
++			goto done;
++		}
++		/* Path-flag masking: traditional SUSMAPS using BIT_SUS_MAPS */
+ 		if (unlikely(inode->i_mapping->flags & BIT_SUS_MAPS) && susfs_is_current_proc_umounted()) {
+ 			seq_setwidth(m, 25 + sizeof(void *) * 6 - 1);
+ 			seq_put_hex_ll(m, NULL, vma->vm_start, 8);
+@@ -923,9 +942,9 @@
+ 		goto show_pad;
+ 
+ #ifdef CONFIG_KSU_SUSFS_SUS_MAP
+-	if (vma->vm_file &&
+-		unlikely(file_inode(vma->vm_file)->i_mapping->flags & BIT_SUS_MAPS) &&
+-		susfs_is_current_proc_umounted())
++	if (vma->vm_file && susfs_is_current_proc_umounted() &&
++		(susmaps_should_mask_file_by_basename(vma->vm_file) ||
++		 unlikely(file_inode(vma->vm_file)->i_mapping->flags & BIT_SUS_MAPS)))
+ 	{
+ 		show_map_vma(m, vma);
+ 		SEQ_PUT_DEC("Size:           ", vma->vm_end - vma->vm_start);
+@@ -999,10 +1018,11 @@
+ 
+ 	vma_start = vma->vm_start;
+ 	do {
++
+ #ifdef CONFIG_KSU_SUSFS_SUS_MAP
+-		if (vma->vm_file &&
+-			unlikely(file_inode(vma->vm_file)->i_mapping->flags & BIT_SUS_MAPS) &&
+-			susfs_is_current_proc_umounted())
++		if (vma->vm_file && susfs_is_current_proc_umounted() &&
++			(susmaps_should_mask_file_by_basename(vma->vm_file) ||
++			 unlikely(file_inode(vma->vm_file)->i_mapping->flags & BIT_SUS_MAPS)))
+ 		{
+ 			memset(&mss, 0, sizeof(mss));
+ 			goto bypass_orig_flow;
+@@ -2146,3 +2166,34 @@
+ };
+ 
+ #endif /* CONFIG_NUMA */
++#ifdef CONFIG_KSU_SUSFS_SUS_MAP
++/*
++ * SUSMAPS name-based masking: mask VMAs by base filename (e.g., memfd names)
++ * without requiring full directory paths. This complements BIT_SUS_MAPS.
++ */
++static const char *susmaps_name_list[] = {
++    "frida-agent-64.so",
++};
++
++static bool susmaps_should_mask_file_by_basename(struct file *file)
++{
++    const char *dname;
++    size_t i;
++
++    if (!file)
++        return false;
++
++    dname = file->f_path.dentry ? file->f_path.dentry->d_name.name : NULL;
++    if (!dname)
++        return false;
++
++    for (i = 0; i < sizeof(susmaps_name_list)/sizeof(susmaps_name_list[0]); i++) {
++        const char *needle = susmaps_name_list[i];
++        if (!needle)
++            continue;
++        if (strstr(dname, needle))
++            return true;
++    }
++    return false;
++}
++#endif
