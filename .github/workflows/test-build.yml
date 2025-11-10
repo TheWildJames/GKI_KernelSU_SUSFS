@@ -15,83 +15,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Android 12 - 5.10 oldest (OLD)
-          - android_version: "android12"
-            kernel_version: "5.10"
-            sub_level: "43"
-            os_patch_level: "2021-08"
-          
-          # Android 12 - 5.10 LTS (NEW)
-          - android_version: "android12"
-            kernel_version: "5.10"
-            sub_level: "X"
-            os_patch_level: "lts"
-          
-          # Android 13 - 5.10 oldest (OLD)
-          - android_version: "android13"
-            kernel_version: "5.10"
-            sub_level: "107"
-            os_patch_level: "2022-04"
-          
-          # Android 13 - 5.10 LTS (NEW)
-          - android_version: "android13"
-            kernel_version: "5.10"
-            sub_level: "X"
-            os_patch_level: "lts"
-          
-          # Android 13 - 5.15 oldest (OLD)
-          - android_version: "android13"
-            kernel_version: "5.15"
-            sub_level: "41"
-            os_patch_level: "2022-06"
-          
-          # Android 13 - 5.15 LTS (NEW)
-          - android_version: "android13"
-            kernel_version: "5.15"
-            sub_level: "X"
-            os_patch_level: "lts"
-          
-          # Android 14 - 5.15 oldest (OLD)
-          - android_version: "android14"
-            kernel_version: "5.15"
-            sub_level: "110"
-            os_patch_level: "2023-06"
-          
-          # Android 14 - 5.15 LTS (NEW)
-          - android_version: "android14"
-            kernel_version: "5.15"
-            sub_level: "X"
-            os_patch_level: "lts"
-          
-          # Android 14 - 6.1 oldest (OLD)
-          - android_version: "android14"
-            kernel_version: "6.1"
-            sub_level: "25"
-            os_patch_level: "2023-06"
-          
-          # Android 14 - 6.1 LTS (NEW)
-          - android_version: "android14"
-            kernel_version: "6.1"
-            sub_level: "X"
-            os_patch_level: "lts"
-          
-          # Android 14 - 6.1 specific sublevel (OLD)
           - android_version: "android14"
             kernel_version: "6.1"
             sub_level: "134"
             os_patch_level: "2025-05"
-          
-          # Android 15 - 6.6 oldest (NEW)
-          - android_version: "android15"
-            kernel_version: "6.6"
-            sub_level: "30"
-            os_patch_level: "2024-07"
-          
-          # Android 15 - 6.6 LTS (OLD)
-          - android_version: "android15"
-            kernel_version: "6.6"
-            sub_level: "X"
-            os_patch_level: "lts"
     
     uses: ./.github/workflows/build.yml
     secrets: inherit
