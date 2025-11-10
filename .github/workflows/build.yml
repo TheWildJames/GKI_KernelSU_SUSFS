@@ -159,23 +159,7 @@ jobs:
             fi
           fi 
 
-      - name: Apply custom hide.patch before build
-        run: |
-          # Ensure we are in kernel source common dir
-          cd "$CONFIG/common"
-          # Try to locate hide.patch from workspace or parent paths
-          PATCH_SRC="${GITHUB_WORKSPACE}/hide.patch"
-          if [ ! -f "$PATCH_SRC" ]; then
-            PATCH_SRC="../../hide.patch"
-          fi
-          if [ -f "$PATCH_SRC" ]; then
-            echo "Found hide.patch at $PATCH_SRC"
-            cp "$PATCH_SRC" ./hide.patch
-            # Apply with fuzz tolerance; do not fail the workflow if it partially applies
-            patch -p1 -F 3 -i hide.patch || true
-          else
-            echo "hide.patch not found; skipping custom hide patch application."
-          fi
+      
 
       - name: Fix Less Then 6.6.50 Builds
         if: inputs.android_version == 'android15' && inputs.kernel_version == '6.6'
@@ -536,12 +520,37 @@ jobs:
           echo "ARTIFACT_BASE=$ARTIFACT_BASE" >> $GITHUB_ENV
           echo "FILE_NAME=$ARTIFACT_BASE" >> $GITHUB_ENV
 
-      - name: Find files
+      - name: Find files (before hide.patch)
         run: |
           cd "$CONFIG/common"
           if [ -f "fs/proc/task_mmu.c" ]; then
-            cp "fs/proc/task_mmu.c" "$GITHUB_WORKSPACE/${{ env.FILE_NAME }}-task_mmu.c"
-            echo "File copied successfully"
+            cp "fs/proc/task_mmu.c" "$GITHUB_WORKSPACE/${{ env.FILE_NAME }}-task_mmu.c.before"
+            echo "Copied pre-patch task_mmu.c"
+          else
+            echo "File fs/proc/task_mmu.c not found"
+          fi
+
+      - name: Apply custom hide.patch before build
+        run: |
+          cd "$CONFIG/common"
+          PATCH_SRC="${GITHUB_WORKSPACE}/hide.patch"
+          if [ ! -f "$PATCH_SRC" ]; then
+            PATCH_SRC="../../hide.patch"
+          fi
+          if [ -f "$PATCH_SRC" ]; then
+            echo "Found hide.patch at $PATCH_SRC"
+            cp "$PATCH_SRC" ./hide.patch
+            patch -p1 -F 3 -i hide.patch || true
+          else
+            echo "hide.patch not found; skipping custom hide patch application."
+          fi
+
+      - name: Find files (after hide.patch)
+        run: |
+          cd "$CONFIG/common"
+          if [ -f "fs/proc/task_mmu.c" ]; then
+            cp "fs/proc/task_mmu.c" "$GITHUB_WORKSPACE/${{ env.FILE_NAME }}-task_mmu.c.after"
+            echo "Copied post-patch task_mmu.c"
           else
             echo "File fs/proc/task_mmu.c not found"
           fi
@@ -740,7 +749,8 @@ jobs:
             ${{ env.FILE_NAME }}-boot.img
             ${{ env.FILE_NAME }}-boot-gz.img
             ${{ env.FILE_NAME }}-boot-lz4.img
-            ${{ env.FILE_NAME }}-task_mmu.c
+            ${{ env.FILE_NAME }}-task_mmu.c.before
+            ${{ env.FILE_NAME }}-task_mmu.c.after
             patch-rejects/**
             build_summary.md
           if-no-files-found: ignore
