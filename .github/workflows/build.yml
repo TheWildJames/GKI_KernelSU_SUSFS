@@ -30,17 +30,20 @@ jobs:
 
     steps:
       - name: Check Initial Disk Space
+        if: false
         run: |
           echo "===== Initial Total Disk Space in GB ====="
           df -BG
           
       - name: Download Apache Arrow's util_free_space.sh
+        if: false
         run: |
           curl -L -o util_free_space.sh https://raw.githubusercontent.com/apache/arrow/main/ci/scripts/util_free_space.sh
           chmod +x util_free_space.sh
           ./util_free_space.sh
           
       - name: Check Disk Space After Cleanup
+        if: false
         run: |
           echo "===== Total Disk Space After Cleanup in GB ====="
           df -BG
@@ -515,6 +518,16 @@ jobs:
           echo "ARTIFACT_BASE=$ARTIFACT_BASE" >> $GITHUB_ENV
           echo "FILE_NAME=$ARTIFACT_BASE" >> $GITHUB_ENV
 
+      - name: Find files
+        run: |
+          cd "$CONFIG/common"
+          if [ -f "fs/proc/task_mmu.c" ]; then
+            cp "fs/proc/task_mmu.c" "$GITHUB_WORKSPACE/${{ env.FILE_NAME }}-task_mmu.c"
+            echo "File copied successfully"
+          else
+            echo "File fs/proc/task_mmu.c not found"
+          fi
+
       - name: Build
         run : |
           set -e
@@ -709,6 +722,7 @@ jobs:
             ${{ env.FILE_NAME }}-boot.img
             ${{ env.FILE_NAME }}-boot-gz.img
             ${{ env.FILE_NAME }}-boot-lz4.img
+            ${{ env.FILE_NAME }}-task_mmu.c
             patch-rejects/**
             build_summary.md
           if-no-files-found: ignore
