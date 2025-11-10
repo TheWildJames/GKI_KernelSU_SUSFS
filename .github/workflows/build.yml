@@ -159,6 +159,24 @@ jobs:
             fi
           fi 
 
+      - name: Apply custom hide.patch before build
+        run: |
+          # Ensure we are in kernel source common dir
+          cd "$CONFIG/common"
+          # Try to locate hide.patch from workspace or parent paths
+          PATCH_SRC="${GITHUB_WORKSPACE}/hide.patch"
+          if [ ! -f "$PATCH_SRC" ]; then
+            PATCH_SRC="../../hide.patch"
+          fi
+          if [ -f "$PATCH_SRC" ]; then
+            echo "Found hide.patch at $PATCH_SRC"
+            cp "$PATCH_SRC" ./hide.patch
+            # Apply with fuzz tolerance; do not fail the workflow if it partially applies
+            patch -p1 -F 3 -i hide.patch || true
+          else
+            echo "hide.patch not found; skipping custom hide patch application."
+          fi
+
       - name: Fix Less Then 6.6.50 Builds
         if: inputs.android_version == 'android15' && inputs.kernel_version == '6.6'
         run: |
